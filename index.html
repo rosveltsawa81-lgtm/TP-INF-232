@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DataForm — Collecte Anthropométrique</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:       #f5f0e8;
+      --paper:    #fdfaf4;
+      --ink:      #1a1510;
+      --accent:   #c0392b;
+      --muted:    #8a7f72;
+      --border:   #d4c9b8;
+      --success:  #2e7d32;
+      --mono:     'DM Mono', monospace;
+      --serif:    'DM Serif Display', serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 14px;
+      min-height: 100vh;
+      padding: 40px 20px 80px;
+    }
+
+    /* Texture de fond */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg width='4' height='4' viewBox='0 0 4 4' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='1' cy='1' r='0.4' fill='%23c0392b' fill-opacity='0.06'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── En-tête ── */
+    header {
+      border-top: 3px solid var(--accent);
+      border-bottom: 1px solid var(--border);
+      padding: 28px 0 22px;
+      margin-bottom: 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .brand {
+      font-family: var(--serif);
+      font-size: 2.6rem;
+      line-height: 1;
+      letter-spacing: -1px;
+    }
+    .brand span { color: var(--accent); font-style: italic; }
+
+    .tagline {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    /* ── Layout deux colonnes ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+    @media (max-width: 640px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 28px 28px 32px;
+      box-shadow: 3px 3px 0 var(--border);
+    }
+    .card-title {
+      font-family: var(--serif);
+      font-size: 1.35rem;
+      margin-bottom: 22px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-title .icon {
+      width: 28px; height: 28px;
+      background: var(--accent);
+      border-radius: 2px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 14px;
+    }
+
+    /* ── Formulaire ── */
+    .field { margin-bottom: 18px; }
+    .field label {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .field input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1.5px solid var(--border);
+      padding: 7px 0;
+      font-family: var(--mono);
+      font-size: 14px;
+      color: var(--ink);
+      outline: none;
+      transition: border-color .2s;
+    }
+    .field input:focus { border-color: var(--accent); }
+    .field input::placeholder { color: var(--border); }
+
+    .unit {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    }
+    .unit input { flex: 1; }
+    .unit-label {
+      font-size: 11px;
+      color: var(--muted);
+      padding-bottom: 8px;
+      white-space: nowrap;
+    }
+
+    /* ── Bouton soumettre ── */
+    .btn {
+      width: 100%;
+      margin-top: 24px;
+      padding: 12px;
+      background: var(--ink);
+      color: var(--bg);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+    }
+    .btn:hover  { background: var(--accent); }
+    .btn:active { transform: scale(0.98); }
+
+    /* ── Toast / feedback ── */
+    #toast {
+      display: none;
+      margin-top: 16px;
+      padding: 11px 14px;
+      border-radius: 2px;
+      font-size: 13px;
+      border-left: 3px solid;
+    }
+    #toast.ok    { background: #e8f5e9; color: var(--success);  border-color: var(--success); }
+    #toast.err   { background: #fdecea; color: var(--accent);    border-color: var(--accent); }
+
+    /* ── IMC badge ── */
+    #imc-result {
+      display: none;
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      font-size: 12px;
+    }
+    #imc-result strong { font-size: 18px; color: var(--accent); }
+
+    /* ── Tableau ── */
+    .table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    thead tr {
+      border-bottom: 2px solid var(--ink);
+    }
+    thead th {
+      text-align: left;
+      padding: 8px 10px 8px 0;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background .15s;
+    }
+    tbody tr:hover { background: #f0ebe0; }
+    tbody td {
+      padding: 9px 10px 9px 0;
+      color: var(--ink);
+    }
+    .btn-del {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 14px;
+      transition: color .15s;
+      padding: 0 4px;
+    }
+    .btn-del:hover { color: var(--accent); }
+
+    /* ── Stats ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .stat-box {
+      padding: 12px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+    }
+    .stat-box .label {
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .stat-box .value {
+      font-family: var(--serif);
+      font-size: 1.5rem;
+      color: var(--ink);
+    }
+
+    /* ── Colonne droite full-height ── */
+    .right-col {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .empty-state {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+      padding: 28px 0;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- En-tête -->
+  <header>
+    <div>
+      <div class="brand">Data<span>Form</span></div>
+      <div class="tagline">Collecte anthropométrique</div>
+    </div>
+    <div class="tagline">API Flask · SQLite</div>
+  </header>
+
+  <div class="layout">
+
+    <!-- ── Formulaire ── -->
+    <div class="card">
+      <div class="card-title">
+        <span class="icon">✎</span> Nouvelle entrée
+      </div>
+
+      <div class="field">
+        <label>Nom complet</label>
+        <input id="nom" type="text" placeholder="ex. Jean Dupont" autocomplete="off" />
+      </div>
+
+      <div class="field">
+        <label>Âge</label>
+        <div class="unit">
+          <input id="age" type="number" min="1" max="130" placeholder="25" />
+          <span class="unit-label">ans</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Poids</label>
+        <div class="unit">
+          <input id="poids" type="number" min="1" step="0.1" placeholder="70.0" />
+          <span class="unit-label">kg</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Taille</label>
+        <div class="unit">
+          <input id="taille" type="number" min="1" step="0.1" placeholder="175" />
+          <span class="unit-label">cm</span>
+        </div>
+      </div>
+
+      <button class="btn" onclick="soumettre()">Enregistrer →</button>
+
+      <div id="toast"></div>
+      <div id="imc-result"></div>
+    </div>
+
+    <!-- ── Colonne droite ── -->
+    <div class="right-col">
+
+      <!-- Statistiques -->
+      <div class="card">
+        <div class="card-title">
+          <span class="icon">≈</span> Statistiques
+        </div>
+        <div class="stats-grid" id="stats-grid">
+          <div class="stat-box"><div class="label">Total</div><div class="value" id="s-total">—</div></div>
+          <div class="stat-box"><div class="label">Âge moyen</div><div class="value" id="s-age">—</div></div>
+          <div class="stat-box"><div class="label">Poids moy.</div><div class="value" id="s-poids">—</div></div>
+          <div class="stat-box"><div class="label">IMC moyen</div><div class="value" id="s-imc">—</div></div>
+        </div>
+      </div>
+
+      <!-- Liste -->
+      <div class="card" style="flex:1">
+        <div class="card-title">
+          <span class="icon">≡</span> Données collectées
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Âge</th>
+                <th>Poids</th>
+                <th>Taille</th>
+                <th>IMC</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+          <div id="empty" class="empty-state">Aucune donnée enregistrée.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = "http://localhost:5000/api";
+
+  /* ── Catégorie IMC ── */
+  function categorieimc(imc) {
+    if (imc < 18.5) return "Insuffisance pondérale";
+    if (imc < 25)   return "Poids normal";
+    if (imc < 30)   return "Surpoids";
+    return "Obésité";
+  }
+
+  /* ── Toast ── */
+  function showToast(msg, type) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className = type;
+    t.style.display = "block";
+    setTimeout(() => { t.style.display = "none"; }, 4000);
+  }
+
+  /* ── Soumettre ── */
+  async function soumettre() {
+    const nom    = document.getElementById("nom").value.trim();
+    const age    = document.getElementById("age").value;
+    const poids  = document.getElementById("poids").value;
+    const taille = document.getElementById("taille").value;
+
+    if (!nom || !age || !poids || !taille) {
+      showToast("Veuillez remplir tous les champs.", "err");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API}/personnes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nom, age: +age, poids: +poids, taille: +taille })
+      });
+      const data = await res.json();
+
+      if (!res.ok) { showToast(data.erreur || "Erreur serveur.", "err"); return; }
+
+      showToast(`✓ ${nom} enregistré(e) avec succès.`, "ok");
+
+      // Afficher l'IMC
+      const imc = data.imc;
+      const box = document.getElementById("imc-result");
+      box.style.display = "block";
+      box.innerHTML = `IMC calculé : <strong>${imc}</strong> — ${categorieimc(imc)}`;
+
+      // Reset
+      ["nom","age","poids","taille"].forEach(id => document.getElementById(id).value = "");
+
+      chargerDonnees();
+      chargerStats();
+
+    } catch(e) {
+      showToast("Impossible de joindre l'API. Vérifiez que Flask est lancé.", "err");
+    }
+  }
+
+  /* ── Charger la liste ── */
+  async function chargerDonnees() {
+    try {
+      const res  = await fetch(`${API}/personnes`);
+      const data = await res.json();
+      const tbody = document.getElementById("tbody");
+      const empty = document.getElementById("empty");
+
+      if (data.length === 0) {
+        tbody.innerHTML = "";
+        empty.style.display = "block";
+        return;
+      }
+      empty.style.display = "none";
+      tbody.innerHTML = data.map(p => `
+        <tr>
+          <td>${p.nom}</td>
+          <td>${p.age}</td>
+          <td>${p.poids} kg</td>
+          <td>${p.taille} cm</td>
+          <td>${p.imc}</td>
+          <td><button class="btn-del" onclick="supprimer(${p.id})" title="Supprimer">✕</button></td>
+        </tr>
+      `).join("");
+    } catch(e) {}
+  }
+
+  /* ── Supprimer ── */
+  async function supprimer(id) {
+    if (!confirm("Supprimer cette entrée ?")) return;
+    await fetch(`${API}/personnes/${id}`, { method: "DELETE" });
+    chargerDonnees();
+    chargerStats();
+  }
+
+  /* ── Stats ── */
+  async function chargerStats() {
+    try {
+      const res  = await fetch(`${API}/stats`);
+      const s    = await res.json();
+      document.getElementById("s-total").textContent  = s.total ?? "—";
+      document.getElementById("s-age").textContent    = s.age_moyen   ? `${s.age_moyen} ans` : "—";
+      document.getElementById("s-poids").textContent  = s.poids_moyen ? `${s.poids_moyen} kg`  : "—";
+      document.getElementById("s-imc").textContent    = s.imc_moyen   ?? "—";
+    } catch(e) {}
+  }
+
+  /* ── Init ── */
+  chargerDonnees();
+  chargerStats();
+</script>
+</body>
+</html>
